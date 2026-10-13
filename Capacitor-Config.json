@@ -1,0 +1,9 @@
+{
+  "appId": "com.jorg.files",
+  "appName": "Jorg Files",
+  "webDir": "src",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "Filesystem": {}
+  }
+}

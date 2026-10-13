@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jorg Files Real</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{font-family: -apple-system,BlinkMacSystemFont,sans-serif;background:#0a0a0a;color:white}
+.file-item:active{background:#222}
+</style>
+</head>
+<body class="bg-[#0a0a0a] min-h-screen pb-20">
+<div class="max-w-md mx-auto p-4">
+  <div class="flex items-center justify-between py-4">
+    <h1 class="text-2xl font-bold flex items-center gap-2">📁 Jorg Files <span class="text-xs bg-violet-600 px-2 py-1 rounded-full">REAL</span></h1>
+    <button id="permBtn" class="text-xs bg-white text-black px-3 py-2 rounded-full font-bold">Dar permisos</button>
+  </div>
+
+  <div id="permBanner" class="bg-amber-500/20 border border-amber-500/50 p-3 rounded-xl text-sm mb-4">
+    ⚠️ Android 16 requiere permiso especial. Dale a "Dar permisos" y luego activa "Permitir administrar todos los archivos" para Jorg Files.
+  </div>
+
+  <div class="bg-[#1a1a1a] rounded-2xl p-4 mb-4">
+    <div class="flex justify-between text-xs text-zinc-400 mb-2"><span>Almacenamiento</span><span id="pathLabel">/storage/emulated/0/</span></div>
+    <div class="w-full bg-zinc-800 h-2 rounded-full overflow-hidden"><div class="bg-violet-600 h-full w-[68%]"></div></div>
+  </div>
+
+  <div class="flex gap-2 mb-4 overflow-x-auto">
+    <button data-path="/storage/emulated/0/Download" class="path-btn whitespace-nowrap bg-white text-black px-4 py-2 rounded-full text-sm font-medium">Descargas</button>
+    <button data-path="/storage/emulated/0/DCIM" class="path-btn whitespace-nowrap bg-zinc-800 px-4 py-2 rounded-full text-sm">Cámara</button>
+    <button data-path="/storage/emulated/0/Pictures" class="path-btn whitespace-nowrap bg-zinc-800 px-4 py-2 rounded-full text-sm">Imágenes</button>
+    <button data-path="/storage/emulated/0/Documents" class="path-btn whitespace-nowrap bg-zinc-800 px-4 py-2 rounded-full text-sm">Documentos</button>
+  </div>
+
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-bold">Archivos reales</h2>
+    <button id="refreshBtn" class="bg-zinc-800 p-2 rounded-full">🔄</button>
+  </div>
+
+  <div id="fileList" class="space-y-1">
+    <div class="text-center py-12 text-zinc-500">
+      <div class="text-4xl mb-3">📂</div>
+      <p>En el navegador no puedo leer tus archivos.<br>Cuando lo instales como APK sí los verás aquí.</p>
+      <p class="text-xs mt-4 text-violet-400">Usando @capacitor/filesystem + MANAGE_ALL_FILES</p>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+let isNative = false;
+try {
+  const { Capacitor } = await import('https://esm.sh/@capacitor/core@6.1.0');
+  isNative = Capacitor.isNativePlatform();
+  if(isNative){
+    document.getElementById('permBanner').style.display='none';
+    const { Filesystem, Directory } = await import('https://esm.sh/@capacitor/filesystem@6.0.1');
+    window.Filesystem = Filesystem;
+    window.Directory = Directory;
+    loadRealFiles('/storage/emulated/0/Download');
+  }
+} catch(e){ console.log('Web mode', e); }
+
+async function loadRealFiles(path){
+  const listEl = document.getElementById('fileList');
+  try {
+    const result = await window.Filesystem.readdir({ path, directory: window.Directory.ExternalStorage });
+    listEl.innerHTML = result.files.map(f => `
+      <div class="file-item flex items-center gap-3 p-3 rounded-xl bg-[#1a1a1a] border border-transparent hover:border-zinc-700">
+        <div class="w-10 h-10 rounded-lg bg-violet-600/20 flex items-center justify-center">${f.type==='directory'?'📁':'📄'}</div>
+        <div class="flex-1 min-w-0"><div class="truncate font-medium text-sm">${f.name}</div><div class="text-xs text-zinc-500">${f.type}</div></div>
+      </div>
+    `).join('') || '<div class="text-zinc-500 text-center py-8">Carpeta vacía</div>';
+    document.getElementById('pathLabel').textContent = path;
+  } catch(err){
+    listEl.innerHTML = `<div class="bg-red-500/20 p-3 rounded-xl text-sm">Error: ${err.message}<br><br>En Android 16 necesitas dar permiso de Todos los archivos en Ajustes.</div>`;
+  }
+}
+
+document.querySelectorAll('.path-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.path-btn').forEach(b=>b.className='path-btn whitespace-nowrap bg-zinc-800 px-4 py-2 rounded-full text-sm');
+    btn.className='path-btn whitespace-nowrap bg-white text-black px-4 py-2 rounded-full text-sm font-medium';
+    if(window.Filesystem) loadRealFiles(btn.dataset.path);
+  });
+});
+
+document.getElementById('permBtn').addEventListener('click', async ()=>{
+  try {
+    if(window.Filesystem){
+      await window.Filesystem.requestPermissions();
+      alert('Ahora ve a Ajustes > Apps > Jorg Files > Permisos > Archivos y activa "Permitir administrar todos los archivos"');
+    } else {
+      alert('Este botón solo funciona cuando la app está instalada como APK en Android 16');
+    }
+  } catch(e){ alert(e.message); }
+});
+
+document.getElementById('refreshBtn').addEventListener('click', ()=>{
+  const path = document.getElementById('pathLabel').textContent;
+  if(window.Filesystem) loadRealFiles(path);
+});
+</script>
+</body>
+</html>
